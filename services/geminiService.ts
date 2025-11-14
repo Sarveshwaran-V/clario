@@ -138,21 +138,21 @@ const workflowSchema = {
 
 export const analyzePageTopics = async (url: string): Promise<{ toolName: string; topics: PageTopic[] }> => {
   const prompt = `
-    Analyze the LIVE content of the URL: ${url}
+    You MUST use web search to visit and analyze the EXACT, CURRENT content at this URL: ${url}
+    
+    **MANDATORY: Do NOT use any pre-existing knowledge or training data about this URL.** 
+    You MUST search for this URL, visit it, and read ONLY what is actually displayed on the page RIGHT NOW.
+    If the page content contradicts your training data, the ACTUAL PAGE CONTENT is always correct.
 
-    Your goal is to identify the primary "tool" a user wants to understand and suggest topics for explanation.
+    Your goal is to identify the primary "tool" or "product" a user wants to understand and suggest topics for explanation.
 
-    **CRITICAL RULES FOR IDENTIFYING THE "TOOL":**
-    1.  **If the URL is for a specific project on a known PLATFORM (like figma.com, miro.com, notion.so, canva.com, linear.app):**
-        - The \`toolName\` MUST be the platform itself (e.g., "Figma", "Notion").
-        - The \`topics\` should then relate to the *content* on that platform (e.g., for a Figma URL, a topic could be "This Figma design file").
-    2.  **If the URL is for a specific project on a CODE REPOSITORY (like github.com, gitlab.com, bitbucket.org, sourceforge.net):**
-        - The \`toolName\` MUST be the name of the repository or project (e.g., for \`github.com/facebook/react\`, the toolName is "React").
-        - The \`topics\` should relate to the repository (e.g., "The entire repository", "Installation & Setup").
-    3.  **For all other URLs (e.g., a product homepage like vercel.com):**
-        - The \`toolName\` is the name of the product or open-source project featured on the page.
+    **CRITICAL RULES FOR IDENTIFYING THE TOOL/PRODUCT:**
+    1. Read the actual page content first via web search.
+    2. Extract the name/brand from what the page says about itself.
+    3. The \`toolName\` MUST be based on the ACTUAL page content, not your assumptions.
+    4. \`topics\` should be based on the actual features/sections mentioned on the page.
 
-    After identifying the tool, identify different ways a user might want this page explained.
+    After reading the live content, identify different ways a user might want this page explained.
 
     You MUST return a JSON object with two keys: "toolName" and "topics".
     "toolName" must be a string containing the primary tool name based on the rules above.
@@ -192,9 +192,10 @@ export const analyzePageTopics = async (url: string): Promise<{ toolName: string
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-pro',
     contents: prompt,
     config: {
+      tools: [{googleSearch: {}}],
       temperature: 0.1,
     },
   });
@@ -211,45 +212,51 @@ export const analyzePageTopics = async (url: string): Promise<{ toolName: string
 
 export const explainToolFromUrl = async (url: string, toolName: string, topic: string): Promise<ToolExplanation> => {
   const prompt = `
-    You are an expert content analysis bot. Your ONLY function is to read the live content from a given URL and structure it into a JSON guide.
-
-    **PRIMARY DIRECTIVE: DO NOT USE ANY PRE-EXISTING KNOWLEDGE.** Your internal knowledge about software tools might be outdated. The content at the provided URL is the only source of truth. You MUST base your entire response exclusively on the information you find at the URL right now. If the information on the page for "${toolName}" contradicts your prior knowledge, you MUST prioritize the information from the URL.
+    You MUST use web search to visit and read the EXACT, CURRENT content at this URL: ${url}
+    
+    **MANDATORY RULES - READ CAREFULLY:**
+    1. DO NOT use any pre-existing knowledge, training data, or cached information.
+    2. Search for this URL and visit it in real-time RIGHT NOW.
+    3. Read ONLY the actual content displayed on the page at this exact moment.
+    4. If the actual page contradicts your training data, the ACTUAL PAGE is always correct.
+    5. Extract information ONLY from what you see on the page - do not infer or assume.
+    6. For GitHub repositories, read the README.md file content first (this is the source of truth).
+    7. Ignore any repository description metadata and focus on README content.
+    8. For websites, read the main page content, not navigation or meta information.
 
     - **URL to Analyze:** ${url}
     - **Tool Name:** "${toolName}"
     - **Specific Topic to Focus On:** "${topic}"
 
-    Based *only* on the content of the URL, generate a guide for a new user. The entire guide (summary, workflow, etc.) must be focused on the specified topic. For instance, if the topic is "Installation," the summary should introduce the tool from a setup perspective and the workflow must detail the installation steps.
+    Visit the URL, read the actual page content, and generate a guide based STRICTLY on what you find.
 
     Your entire output MUST be a single JSON code block. Do not add any text before or after it. It must adhere to this structure:
     - "toolName": The name of the tool, which must be "${toolName}".
-    - "tagline": Find the main tagline or headline on the page, relevant to the topic if possible.
-    - "summary": A one-paragraph summary explaining the tool's purpose, based *strictly* on the text from the URL and focused on the chosen topic. Use backticks (\`) for technical terms.
-    - "workflow": A 3-5 step workflow for a primary use case found on the page, relevant to the topic. EACH step MUST be an object with "title" and "description".
-    - "keyActions": 3-4 key features mentioned on the page, relevant to the topic. EACH feature MUST be an object with "name" and "description".
-    - "suggestedQuestions": An array of 3-4 insightful follow-up questions a user might have after reading the page's content about the topic.
-    - "suggestedWorkflows": An array of 3-4 goal-oriented tasks a user could accomplish based on the information on the page, related to the topic.
+    - "tagline": The main headline or tagline found on the actual page.
+    - "summary": A one-paragraph summary based ONLY on what the actual page says about itself, focused on the chosen topic.
+    - "workflow": A 3-5 step workflow based on actual features/instructions found on the page.
+    - "keyActions": 3-4 key features mentioned on the actual page.
+    - "suggestedQuestions": Questions based on what the page actually discusses.
+    - "suggestedWorkflows": Tasks that the page actually mentions or enables.
 
     Example format:
     \`\`\`json
     {
       "toolName": "${toolName}",
-      "tagline": "The main headline from the webpage.",
-      "summary": "A summary based strictly on the URL's content, explaining what the tool does and who it's for, with a focus on the specific topic.",
+      "tagline": "The main headline from the actual webpage.",
+      "summary": "A summary based strictly on the URL's actual content.",
       "workflow": [
-        { "title": "Step 1: Found on Page", "description": "The first action described on the page related to the topic." },
-        { "title": "Step 2: Core Action from Page", "description": "The main task a user can perform, as described on the page and related to the topic." }
+        { "title": "Step found on actual page", "description": "Action described on the page" },
+        { "title": "Another step from page", "description": "Action described on the page" }
       ],
       "keyActions": [
-        { "name": "Feature Mentioned on Page", "description": "A description of a feature mentioned on the page, related to the topic." }
+        { "name": "Feature on actual page", "description": "As described on the page" }
       ],
       "suggestedQuestions": [
-        "How do I use feature X, which was mentioned on the page?",
-        "What is the pricing model, as described on the page?"
+        "Question based on actual page content"
       ],
       "suggestedWorkflows": [
-        "Perform a task described on the homepage",
-        "Sign up for the beta as mentioned on the page"
+        "Task mentioned on actual page"
       ]
     }
     \`\`\`
@@ -259,8 +266,8 @@ export const explainToolFromUrl = async (url: string, toolName: string, topic: s
     model: 'gemini-2.5-pro',
     contents: prompt,
     config: {
-      temperature: 0.3,
       tools: [{googleSearch: {}}],
+      temperature: 0.3,
     },
   });
 
