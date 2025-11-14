@@ -138,21 +138,22 @@ const workflowSchema = {
 
 export const analyzePageTopics = async (url: string): Promise<{ toolName: string; topics: PageTopic[] }> => {
   const prompt = `
-    You MUST use web search to visit and analyze the EXACT, CURRENT content at this URL: ${url}
+    You are an AI assistant that MUST follow instructions precisely.
+    Your primary and most important task is to use the provided web search tool to visit and analyze the content of this EXACT URL: ${url}
     
-    **MANDATORY: Do NOT use any pre-existing knowledge or training data about this URL.** 
-    You MUST search for this URL, visit it, and read ONLY what is actually displayed on the page RIGHT NOW.
-    If the page content contradicts your training data, the ACTUAL PAGE CONTENT is always correct.
+    **MANDATORY INSTRUCTIONS - DO NOT DEVIATE:**
+    1.  **You MUST use the web search tool.** Do not use any other source of information.
+    2.  **You MUST visit the URL provided.** Do not search for the tool or topic in general.
+    3.  **You MUST analyze the content of the URL as it exists right now.** Do not use any pre-existing knowledge or cached information.
+    4.  **The content of the URL is the ONLY source of truth.** If it contradicts your training data, you MUST use the content from the URL.
 
-    Your goal is to identify the primary "tool" or "product" a user wants to understand and suggest topics for explanation.
+    After you have visited and analyzed the URL, your goal is to identify the primary "tool" or "product" a user wants to understand and suggest topics for explanation.
 
     **CRITICAL RULES FOR IDENTIFYING THE TOOL/PRODUCT:**
     1. Read the actual page content first via web search.
     2. Extract the name/brand from what the page says about itself.
     3. The \`toolName\` MUST be based on the ACTUAL page content, not your assumptions.
     4. \`topics\` should be based on the actual features/sections mentioned on the page.
-
-    After reading the live content, identify different ways a user might want this page explained.
 
     You MUST return a JSON object with two keys: "toolName" and "topics".
     "toolName" must be a string containing the primary tool name based on the rules above.
@@ -201,6 +202,7 @@ export const analyzePageTopics = async (url: string): Promise<{ toolName: string
   });
 
   const jsonText = response.text.trim();
+  console.log("Gemini response for analyzePageTopics:", jsonText);
   try {
     const parsed = extractJson(jsonText);
     return { toolName: parsed.toolName, topics: parsed.topics || [] };
@@ -212,23 +214,22 @@ export const analyzePageTopics = async (url: string): Promise<{ toolName: string
 
 export const explainToolFromUrl = async (url: string, toolName: string, topic: string): Promise<ToolExplanation> => {
   const prompt = `
-    You MUST use web search to visit and read the EXACT, CURRENT content at this URL: ${url}
+    You are an AI assistant that MUST follow instructions precisely.
+    Your primary and most important task is to use the provided web search tool to visit and analyze the content of this EXACT URL: ${url}
     
-    **MANDATORY RULES - READ CAREFULLY:**
-    1. DO NOT use any pre-existing knowledge, training data, or cached information.
-    2. Search for this URL and visit it in real-time RIGHT NOW.
-    3. Read ONLY the actual content displayed on the page at this exact moment.
-    4. If the actual page contradicts your training data, the ACTUAL PAGE is always correct.
-    5. Extract information ONLY from what you see on the page - do not infer or assume.
-    6. For GitHub repositories, read the README.md file content first (this is the source of truth).
-    7. Ignore any repository description metadata and focus on README content.
-    8. For websites, read the main page content, not navigation or meta information.
+    **MANDATORY INSTRUCTIONS - DO NOT DEVIATE:**
+    1.  **You MUST use the web search tool.** Do not use any other source of information.
+    2.  **You MUST visit the URL provided: ${url}** Do not search for the tool or topic in general.
+    3.  **You MUST analyze the content of the URL as it exists right now.** Do not use any pre-existing knowledge or cached information.
+    4.  **The content of the URL is the ONLY source of truth.** If it contradicts your training data, you MUST use the content from the URL.
+    5.  For GitHub repositories, you MUST read the README.md file content first. This is the primary source of truth.
+    6.  For websites, you MUST read the main page content. Ignore navigation, headers, and footers if they are not relevant to the main content.
 
     - **URL to Analyze:** ${url}
     - **Tool Name:** "${toolName}"
     - **Specific Topic to Focus On:** "${topic}"
 
-    Visit the URL, read the actual page content, and generate a guide based STRICTLY on what you find.
+    After you have visited and analyzed the URL, generate a guide based STRICTLY on what you find.
 
     Your entire output MUST be a single JSON code block. Do not add any text before or after it. It must adhere to this structure:
     - "toolName": The name of the tool, which must be "${toolName}".
@@ -272,6 +273,7 @@ export const explainToolFromUrl = async (url: string, toolName: string, topic: s
   });
 
   const jsonText = response.text.trim();
+  console.log("Gemini response for explainToolFromUrl:", jsonText);
   try {
     const parsedExplanation = extractJson(jsonText) as ToolExplanation;
     // Ensure the tool name matches the requested context, as the model can sometimes deviate.

@@ -31,15 +31,12 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({ topics, url, onSel
   const [customTopic, setCustomTopic] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const regularTopics = useMemo(() => topics.filter(t => t.icon !== 'Other'), [topics]);
-  const otherTopic = useMemo(() => topics.find(t => t.icon === 'Other'), [topics]);
-  
   const handleTopicClick = (topicTitle: string) => {
-    if (topicTitle === otherTopic?.title) {
-        setShowCustomInput(true);
-    } else {
-        onSelect(topicTitle);
-    }
+    onSelect(topicTitle);
+  };
+
+  const handleOtherTopicClick = () => {
+    setShowCustomInput(true);
   };
 
   const handleCustomSubmit = (e: React.FormEvent) => {
@@ -48,6 +45,9 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({ topics, url, onSel
       onSelect(customTopic.trim());
     }
   };
+
+  const mainTopics = useMemo(() => topics.filter(t => t.title.toLowerCase() !== 'something else').slice(0, 3), [topics]);
+  const somethingElseTopic = useMemo(() => topics.find(t => t.title.toLowerCase() === 'something else'), [topics]);
 
   return (
     <div className="w-full max-w-lg mx-auto animate-fade-in pb-8">
@@ -58,7 +58,7 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({ topics, url, onSel
             </p>
         </div>
         <div className="space-y-3">
-            {regularTopics.map((topic) => {
+            {mainTopics.map((topic) => {
                 const IconComponent = iconMap[topic.icon] || RepositoryIcon;
                 return (
                     <button 
@@ -80,19 +80,22 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({ topics, url, onSel
                 );
             })}
 
-            {otherTopic && (
+            {somethingElseTopic && !showCustomInput && (
                  <button 
-                    key={otherTopic.title} 
-                    onClick={() => handleTopicClick(otherTopic.title)}
+                    key={somethingElseTopic.title} 
+                    onClick={handleOtherTopicClick}
                     className="w-full flex items-center gap-4 text-left p-4 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl transition-all group"
                 >
                     <div className="flex-shrink-0 p-3 bg-neutral-800 group-hover:bg-neutral-700 rounded-lg transition-colors">
                         <SomethingElseIcon className="w-6 h-6 text-neutral-300" />
                     </div>
                     <div className="flex-1">
-                        <h2 className="font-semibold text-white">{otherTopic.title}</h2>
-                        <p className="text-neutral-400 text-sm">{otherTopic.description}</p>
+                        <h2 className="font-semibold text-white">{somethingElseTopic.title}</h2>
+                        <p className="text-neutral-400 text-sm">{somethingElseTopic.description}</p>
                     </div>
+                    <svg className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                 </button>
             )}
             
