@@ -193,7 +193,7 @@ export const analyzePageTopics = async (url: string): Promise<{ toolName: string
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
       tools: [{googleSearch: {}}],
@@ -264,7 +264,7 @@ export const explainToolFromUrl = async (url: string, toolName: string, topic: s
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
       tools: [{googleSearch: {}}],
@@ -308,7 +308,7 @@ export const explainToolFromName = async (toolName: string): Promise<ToolExplana
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
